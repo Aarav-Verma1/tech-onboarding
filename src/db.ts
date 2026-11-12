@@ -25,11 +25,20 @@ let server: MongoMemoryServer | undefined;
 let client: MongoClient | undefined;
 let db: Db | undefined;
 
-/** Starts an in-memory MongoDB (first run downloads a mongod binary) and connects to it. */
 export async function startDb(): Promise<Db> {
   server = await MongoMemoryServer.create();
   client = await MongoClient.connect(server.getUri());
   db = client.db("expo");
+
+  const assignments = db.collection<Assignment>("assignments");
+  await assignments.createIndex(
+    { judgeId: 1 },
+    { unique: true, partialFilterExpression: { status: "QUEUED" } }
+  );
+  await assignments.createIndex(
+    { projectId: 1 },
+    { unique: true, partialFilterExpression: { status: "QUEUED" } }
+  );
   return db;
 }
 
@@ -48,7 +57,6 @@ export function collections() {
   };
 }
 
-/** Resets the data to 10 projects (p1-p10), 12 judges (j1-j12) and no assignments. */
 export async function seed(): Promise<void> {
   const { projects, judges, assignments } = collections();
   await Promise.all([projects.deleteMany({}), judges.deleteMany({}), assignments.deleteMany({})]);
